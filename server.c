@@ -52,11 +52,8 @@ int main(int argc, char* argv[]) {
             if (bytes_read == -1) {
                 if (feof(db_file)) {
                     char buffer[LINE_SIZE];
-                    strcat(buffer, key);
-                    strcat(buffer, " ");
-                    strcat(buffer, new_value);
-                    strcat(buffer, "\0");
-                    fprintf(db_file, "\n%s", buffer);
+                    snprintf(buffer, LINE_SIZE, "%s %s\n", key, new_value);
+                    fprintf(db_file, "%s", buffer);
                     break;
                 }
             } else { // we need to overwrite the value
@@ -64,8 +61,8 @@ int main(int argc, char* argv[]) {
                 if (key_in_line != NULL && strcmp(key_in_line, key) == 0) {
                     char* value = strtok(NULL, "\n");
                     if (value != NULL) {
-                        value = new_value;
-                        // write new value to file
+                        // how do we overwrite the line from after the whitespace?
+                        strcpy(value, new_value);
                     }
                 }
             }
