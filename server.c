@@ -47,6 +47,7 @@ int main(int argc, char* argv[]) {
         free(line);
     } else if (strcmp(argv[1], "set") == 0 || strcmp(argv[1], "SET") == 0) {
         char* new_value = argv[3];
+        ssize_t prev_line = ftell(db_file);
         while (1) {
             ssize_t bytes_read = getline(&line, &len, db_file);
             if (bytes_read == -1) {
@@ -54,16 +55,27 @@ int main(int argc, char* argv[]) {
                     char buffer[LINE_SIZE];
                     snprintf(buffer, LINE_SIZE, "%s %s\n", key, new_value);
                     fprintf(db_file, "%s", buffer);
-                    break;
+                } else {
+                    perror("Error reading line.");
                 }
-            } else { // we need to overwrite the value
-                char* key_in_line = strtok(line, " ");
+                break;
+            } else {
+                char* line_copy = strdup(line);
+                char* key_in_line = strtok(line_copy, " ");
                 if (key_in_line != NULL && strcmp(key_in_line, key) == 0) {
                     char* value = strtok(NULL, "\n");
                     if (value != NULL) {
                         // how do we overwrite the line from after the whitespace?
-                        strcpy(value, new_value);
+                        fseek(db_file, prev_line, SEEK_SET);
+                        char buffer[LINE_SIZE];
+                        snprintf(buffer, LINE_SIZE, "%s %s\n", key, new_value);
+                        fprintf(db_file, "%s", buffer);
+                        free(line_copy);
+                        break;
                     }
+                } else {
+                    free(line_copy);
+                    prev_line = ftell(db_file);
                 }
             }
         }
