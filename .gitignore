@@ -50,3 +50,13 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# compiled binary
+server
+
+# database file
+db.txt
+
+# Added by cargo
+
+/target
