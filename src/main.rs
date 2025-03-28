@@ -1,6 +1,8 @@
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::env;
+use std::os::unix::fs::OpenOptionsExt;
+use fs2::FileExt;
 
 const DB_FILE_PATH: &str = "db.txt";
 
@@ -32,7 +34,8 @@ fn main() -> std::io::Result<()> {
 
 fn get_by_key(target_key: &str) -> std::io::Result<Option<String>>{
     let file = File::open(DB_FILE_PATH)?;
-    let bufreader = BufReader::new(file);
+    FileExt::lock_shared(&file)?;
+    let bufreader = BufReader::new(&file);
 
     for line_result in bufreader.lines() {
         let line = line_result?;
@@ -44,6 +47,7 @@ fn get_by_key(target_key: &str) -> std::io::Result<Option<String>>{
             }
         }
     }
+    FileExt::unlock(&file)?;
     Ok(None)
 }
 
@@ -71,16 +75,21 @@ fn set_value(target_key: &str, target_value: &str) -> std::io::Result<Option<Str
         lines.push(format!("{target_key} {target_value}"));
     }
 
-    let file = OpenOptions::new()
+    let mut file_write = OpenOptions::new()
         .write(true)
         .truncate(true)
         .create(true)
+        .mode(0o600)
         .open(DB_FILE_PATH)?;
+    FileExt::lock_exclusive(&file_write)?;
 
-    let mut bufwriter = BufWriter::new(file);
+    let mut bufwriter = BufWriter::new(&mut file_write);
     for line in lines {
         writeln!(bufwriter, "{line}")?;
     }
+    bufwriter.flush()?;
+    drop(bufwriter);
+    FileExt::unlock(&file_write)?;
     Ok(None)
 
 }
