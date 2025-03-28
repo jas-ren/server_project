@@ -54,8 +54,15 @@ fn get_by_key(target_key: &str) -> std::io::Result<Option<String>>{
 }
 
 fn set_value(target_key: &str, target_value: &str) -> std::io::Result<Option<String>> {
-    let file = File::open(DB_FILE_PATH)?;
-    let bufreader = BufReader::new(file);
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .mode(0o600)
+        .open(DB_FILE_PATH)?;
+    FileExt::lock_exclusive(&file)?;
+    let bufreader = BufReader::new(&file);
 
     let mut lines = Vec::new();
     let mut found = false;
@@ -77,22 +84,13 @@ fn set_value(target_key: &str, target_value: &str) -> std::io::Result<Option<Str
         lines.push(format!("{target_key} {target_value}"));
     }
 
-    let mut file_write = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .mode(0o600)
-        .open(DB_FILE_PATH)?;
-    FileExt::lock_exclusive(&file_write)?;
-    thread::sleep(time::Duration::from_secs(5));
-
-    let mut bufwriter = BufWriter::new(&mut file_write);
+    let mut bufwriter = BufWriter::new(&mut file);
     for line in lines {
         writeln!(bufwriter, "{line}")?;
     }
     bufwriter.flush()?;
     drop(bufwriter);
-    FileExt::unlock(&file_write)?;
+    FileExt::unlock(&file)?;
     Ok(None)
 
 }
