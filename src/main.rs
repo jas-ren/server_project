@@ -3,6 +3,8 @@ use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::env;
 use std::os::unix::fs::OpenOptionsExt;
 use fs2::FileExt;
+use std::thread;
+use std::time;
 
 const DB_FILE_PATH: &str = "db.txt";
 
@@ -82,6 +84,7 @@ fn set_value(target_key: &str, target_value: &str) -> std::io::Result<Option<Str
         .mode(0o600)
         .open(DB_FILE_PATH)?;
     FileExt::lock_exclusive(&file_write)?;
+    thread::sleep(time::Duration::from_secs(5));
 
     let mut bufwriter = BufWriter::new(&mut file_write);
     for line in lines {
