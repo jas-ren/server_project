@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 fs2 = "0.4.3"
+nix = "0.29.0"
