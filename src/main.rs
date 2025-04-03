@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::env;
 use std::os::unix::fs::OpenOptionsExt;
 use fs2::FileExt;
-use nix::unistd;
+use nix::unistd::{fork, ForkResult};
 
 const DB_FILE_PATH: &str = "db.txt";
 
@@ -29,24 +29,27 @@ fn main() -> std::io::Result<()> {
         "DELETE" => {
             let target_keys = &args[2..];
             let mut child_pids = Vec::new();
+            let mut failed_forks = Vec::new();
 
 
             for key in target_keys {
                 match unsafe {
-                    nix::unistd::fork()
+                    fork()
                 } {
-                    Ok(nix::unistd::ForkResult::Parent {child} ) => {
+                    Ok(ForkResult::Parent {child} ) => {
                         child_pids.push(child);
                     },
-                    Ok(nix::unistd::ForkResult::Child) => {
-                        todo!()
+                    Ok(ForkResult::Child) => {
+                        delete_by_key(key)?;
+                    }
+                    Err(e) => {
+                        failed_forks.push((key.to_string(), format!("Fork error: {}", e)));
                     }
                 }
-                let new_proc = std::process::Command::new(delete_by_key(key));
             }
         }
         _ => {
-            println!("invalid function. Please use GET or SET\n");
+            println!("invalid function. Please use GET, SET or DELETE\n");
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid function"));
         }
     }
